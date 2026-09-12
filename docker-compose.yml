@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  # 1. PostgreSQL Database
+  postgres-db:
+    image: postgres:17-alpine
+    container_name: ecounsellor-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: ecounsellor_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: indra
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # 2. Spring Boot Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ecounsellor-backend
+    restart: always
+    depends_on:
+      - postgres-db
+    environment:
+      SERVER_PORT: 8085
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-db:5432/ecounsellor_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: indra
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+    ports:
+      - "8085:8085"
+
+  # 3. College Frontend Dashboard
+  frontend:
+    build:
+      context: ./frontend/dashboard
+      dockerfile: Dockerfile
+    container_name: ecounsellor-frontend
+    restart: always
+    depends_on:
+      - backend
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8085
+    ports:
+      - "5173:5173"
+
+      # 4. Admin Dashboard
+
+  admin-frontend:
+      build:
+        context: ./frontend/admin-dashboard
+        dockerfile: Dockerfile
+      container_name: ecounsellor-admin-frontend
+      restart: always
+      depends_on:
+        - backend
+      environment:
+        - VITE_API_BASE_URL=http://localhost:8085
+      ports:
+        - "5174:5174"
+
+volumes:
+  postgres_data:
